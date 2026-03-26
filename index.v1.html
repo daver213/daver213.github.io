@@ -34,15 +34,19 @@
         
         #searchStatus { 
             font-size: 0.85rem; 
-            font-weight: 700; 
+            font-weight: 900; 
             text-transform: uppercase; 
             letter-spacing: 2px; 
-            color: var(--betty-gold); 
+            color: #fff; 
             height: 20px; 
             margin-bottom: 15px;
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.3s, color 0.3s;
         }
+
+        /* STATUS COLORS */
+        .status-betty { color: var(--betty-gold) !important; text-shadow: 0 0 10px rgba(255, 204, 0, 0.5); animation: blink 0.5s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
 
         /* LOADING ANIMATIONS */
         .loading #searchStatus { opacity: 1; }
@@ -82,8 +86,8 @@
         .setlist-item { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; font-size: 1.1rem; opacity: 0.7; text-align: left; }
         .setlist-item.active { color: var(--dead-red); opacity: 1; font-weight: 800; border-left: 4px solid var(--dead-red); padding-left: 11px; }
 
-        @keyframes betty-flash { 0%, 100% { box-shadow: 0 0 20px #ff0000; background: #ff0000; } 50% { box-shadow: 0 0 35px #0047ab; background: #0047ab; } }
-        .betty-active { animation: betty-flash 0.8s infinite !important; border: 2px solid var(--betty-gold) !important; color: white !important; }
+        @keyframes betty-flash { 0%, 100% { box-shadow: 0 0 20px #ff0000; background: #ff0000; } 50% { box-shadow: 0 0 45px var(--betty-gold); background: var(--betty-gold); } }
+        .betty-active { animation: betty-flash 0.6s infinite !important; border: 3px solid white !important; color: #000 !important; }
     </style>
 </head>
 <body>
@@ -136,7 +140,7 @@
         </div>
 
         <div class="filter-dock">
-            <input type="text" id="songFilter" class="filter-input" placeholder="Request Song (e.g. Althea)">
+            <input type="text" id="songFilter" class="filter-input" placeholder="Request Song (e.g. Terrapin)">
             <div class="source-selector">
                 <button class="source-btn active" id="btnSbd" onclick="setSource('SBD', this)">SBD</button>
                 <button class="source-btn" id="btnAud" onclick="setSource('AUD', this)">AUD</button>
@@ -188,7 +192,10 @@
         return `${mins}:${s < 10 ? '0' : ''}${s}`;
     }
 
-    function setStatus(msg) { statusHUD.innerText = msg; }
+    function setStatus(msg, isBetty = false) { 
+        statusHUD.innerText = msg;
+        statusHUD.classList.toggle('status-betty', isBetty);
+    }
 
     async function masterShuffle() {
         mainApp.classList.add('loading');
@@ -207,7 +214,7 @@
         
         if (songInput) {
             query += ` AND (title:*${encodeURIComponent(songInput)}* OR description:*${encodeURIComponent(songInput)}*)`;
-            setStatus(`DIGGING FOR ${songInput.toUpperCase()}...`);
+            setStatus(`SEARCHING FOR ${songInput.toUpperCase()}...`);
         }
         
         if (exact) query += ` AND date:${exact}`; 
@@ -226,7 +233,7 @@
                 const shuffledDocs = data.response.docs.sort(() => Math.random() - 0.5);
                 
                 for (let i = 0; i < Math.min(shuffledDocs.length, 15); i++) {
-                    if (songInput) setStatus(`CHECKING SHOW ${i+1}/15...`);
+                    if (songInput) setStatus(`CHECKING VAULT REEL ${i+1}...`);
                     const found = await loadShow(shuffledDocs[i].identifier, true, songInput, true);
                     if (found) {
                         mainApp.classList.remove('loading');
@@ -275,8 +282,17 @@
 
         currentIdentifier = id;
         currentShowTracks = mp3s;
+        
         const sourceInfo = (meta.metadata.source || "").toLowerCase() + (meta.metadata.notes || "").toLowerCase();
-        if(sourceInfo.includes("betty")) document.getElementById("shuffleBtn").classList.add('betty-active');
+        const isBetty = sourceInfo.includes("betty");
+
+        if (isBetty) {
+            setStatus("BETTY BOARD DETECTED", true);
+            document.getElementById("shuffleBtn").classList.add('betty-active');
+            // Give the user a moment to see the Betty announcement
+            if (!dryRun) await new Promise(r => setTimeout(r, 1200));
+        }
+
         document.getElementById("showDate").innerText = meta.metadata.date || "Unknown Date";
         document.getElementById("showLocation").innerText = meta.metadata.venue || meta.metadata.coverage || "Unknown Location";
         const list = document.getElementById("setlist-content");
