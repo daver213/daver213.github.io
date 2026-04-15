@@ -17,7 +17,8 @@
             --glass: rgba(255, 255, 255, 0.08);
         }
 
-        body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background: var(--bg-gradient); color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        body { margin: 0; padding: 16px 0; font-family: 'Inter', sans-serif; background: var(--bg-gradient); color: white; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; overflow-y: auto; }
+        @media (min-height: 900px) { body { align-items: center; } }
         .app-container { width: 95%; max-width: 550px; position: relative; }
 
         .player-card {
@@ -211,9 +212,13 @@
         statusHUD.classList.toggle('status-betty', isBetty);
     }
 
-    const BLOCKED = ["drums", "space", "crowd", "tuning"];
+    const BLOCKED = ["drums", "space", "drums/space", "crowd", "tuning", "encore"];
     function filterTracks(files) {
-        return files.filter(f => f.name.endsWith(".mp3") && !BLOCKED.some(b => f.name.toLowerCase().includes(b)));
+        return files.filter(f => {
+            if (!f.name.endsWith(".mp3")) return false;
+            const haystack = ((f.title || "") + " " + f.name).toLowerCase();
+            return !BLOCKED.some(b => haystack.includes(b));
+        });
     }
 
     async function masterShuffle() {
@@ -227,7 +232,7 @@
 
         let sQuery = selectedSource === "SBD" ? "(source:SBD OR source:Betty)" :
                      selectedSource === "AUD" ? "source:AUD" :
-                     "(source:SBD OR source:AUD OR source:Betty)";
+                     "(source:SBD OR source:Betty OR source:AUD)";
 
         let query = `collection:GratefulDead AND ${sQuery} AND mediatype:etree`;
 
@@ -246,11 +251,18 @@
 
         try {
             // rows=50 instead of 300 — we only inspect 15 candidates max
-            const res = await fetch(`https://archive.org/advancedsearch.php?q=${encodeURIComponent(query)}&fl[]=identifier&rows=50&output=json`);
+            const res = await fetch(`https://archive.org/advancedsearch.php?q=${encodeURIComponent(query)}&fl[]=identifier&fl[]=source&rows=50&output=json`);
             const data = await res.json();
 
             if (data.response.docs.length > 0) {
+                // Shuffle randomly, then stable-sort SBD/Betty to front when BOTH is selected
                 const shuffledDocs = data.response.docs.sort(() => Math.random() - 0.5);
+                if (selectedSource === "BOTH") {
+                    shuffledDocs.sort((a, b) => {
+                        const isSbd = s => /sbd|betty/i.test(s || "");
+                        return isSbd(b.source) - isSbd(a.source);
+                    });
+                }
 
                 if (songInput) {
                     // Race all candidates in parallel instead of checking them sequentially
