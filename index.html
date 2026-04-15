@@ -321,7 +321,6 @@
         if (isBetty) {
             setStatus("BETTY BOARD DETECTED", true);
             document.getElementById("shuffleBtn").classList.add('betty-active');
-            await new Promise(r => setTimeout(r, 1200));
         }
 
         document.getElementById("showDate").innerText = meta.metadata.date || "Unknown Date";
@@ -329,6 +328,7 @@
         document.getElementById("setlist-content").innerHTML = currentShowTracks
             .map((t, i) => `<div class="setlist-item" data-idx="${i}">${i+1}. ${t.title || t.name}</div>`)
             .join("");
+        // Play before any delay so the browser's user-gesture context is still active
         playTrack(startIdx !== -1 ? startIdx : (pickRandom ? Math.floor(Math.random() * currentShowTracks.length) : 0));
         return true;
     }
