@@ -366,7 +366,14 @@
         btn.classList.add('active');
     }
     function toggleSetlist(){ document.getElementById("setlist-panel").classList.toggle("open"); }
-    player.onended = () => skipTrack();
+    player.onended = () => {
+        const next = currentIndex + 1;
+        if (next < currentShowTracks.length) {
+            playTrack(next);  // advance within the show — reliable chained autoplay
+        } else {
+            masterShuffle();  // last track done, fetch a new show
+        }
+    };
     volumeSlider.oninput = (e) => { player.volume = e.target.value; };
 </script>
 </body>
